@@ -3,13 +3,19 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: CartCompass API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: products
+    description: Product catalog operations
+  - name: stores
+    description: Store operations
+  - name: compare
+    description: Basket comparison operations
 paths:
   /healthz:
     get:
@@ -24,6 +30,127 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: List products
+      description: Returns all products, optionally filtered by category
+      parameters:
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by category name
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search products by name
+      responses:
+        "200":
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+
+  /products/{id}:
+    get:
+      operationId: getProduct
+      tags: [products]
+      summary: Get product by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Product details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          description: Product not found
+
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [products]
+      summary: List all categories
+      description: Returns all available product categories
+      responses:
+        "200":
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+
+  /stores:
+    get:
+      operationId: listStores
+      tags: [stores]
+      summary: List stores
+      description: Returns all supported stores
+      responses:
+        "200":
+          description: List of stores
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Store"
+
+  /compare:
+    post:
+      operationId: compareBasket
+      tags: [compare]
+      summary: Compare basket across stores
+      description: Calculates total cost of basket at each store and returns the cheapest recommendation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BasketInput"
+      responses:
+        "200":
+          description: Comparison results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComparisonResult"
+        "400":
+          description: Invalid basket
+
+  /prices:
+    get:
+      operationId: listPrices
+      tags: [stores]
+      summary: List all prices
+      description: Returns all product prices across all stores
+      responses:
+        "200":
+          description: List of prices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Price"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +161,111 @@ components:
       required:
         - status
 
+    Product:
+      type: object
+      required: [id, name, category]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+        brand:
+          type: ["string", "null"]
+        packageSize:
+          type: ["string", "null"]
+        unitType:
+          type: ["string", "null"]
+
+    Category:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+
+    Store:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+
+    Price:
+      type: object
+      required: [productId, storeId, price]
+      properties:
+        productId:
+          type: integer
+        storeId:
+          type: integer
+        price:
+          type: number
+        unitPrice:
+          type: ["number", "null"]
+        lastUpdated:
+          type: ["string", "null"]
+
+    BasketItem:
+      type: object
+      required: [productId, quantity]
+      properties:
+        productId:
+          type: integer
+        quantity:
+          type: integer
+
+    BasketInput:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BasketItem"
+
+    StoreTotal:
+      type: object
+      required: [storeId, storeName, total]
+      properties:
+        storeId:
+          type: integer
+        storeName:
+          type: string
+        total:
+          type: number
+
+    ItemSaving:
+      type: object
+      required: [productId, productName, savings]
+      properties:
+        productId:
+          type: integer
+        productName:
+          type: string
+        savings:
+          type: number
+
+    ComparisonResult:
+      type: object
+      required: [storeTotals, winnerId, winnerName, winnerTotal, savings, itemSavings]
+      properties:
+        storeTotals:
+          type: array
+          items:
+            $ref: "#/components/schemas/StoreTotal"
+        winnerId:
+          type: integer
+        winnerName:
+          type: string
+        winnerTotal:
+          type: number
+        savings:
+          type: number
+        itemSavings:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItemSaving"
