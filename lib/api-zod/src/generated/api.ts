@@ -32,7 +32,8 @@ export const ListProductsResponseItem = zod.object({
   "category": zod.string(),
   "brand": zod.string().nullish(),
   "packageSize": zod.string().nullish(),
-  "unitType": zod.string().nullish()
+  "unitType": zod.string().nullish(),
+  "baseUnit": zod.string().nullish()
 })
 export const ListProductsResponse = zod.array(ListProductsResponseItem)
 
@@ -50,7 +51,8 @@ export const GetProductResponse = zod.object({
   "category": zod.string(),
   "brand": zod.string().nullish(),
   "packageSize": zod.string().nullish(),
-  "unitType": zod.string().nullish()
+  "unitType": zod.string().nullish(),
+  "baseUnit": zod.string().nullish()
 })
 
 
@@ -101,6 +103,18 @@ export const CompareBasketResponse = zod.object({
   "productName": zod.string(),
   "savings": zod.number()
 })),
+  "itemBreakdown": zod.array(zod.object({
+  "productId": zod.number(),
+  "productName": zod.string(),
+  "quantity": zod.number(),
+  "storePrices": zod.array(zod.object({
+  "storeId": zod.number(),
+  "storeName": zod.string(),
+  "price": zod.number(),
+  "unitPrice": zod.number().nullish(),
+  "baseUnit": zod.string().nullish()
+}))
+})).optional(),
   "pricesLastUpdated": zod.string().nullish().describe('ISO timestamp of the most recently updated price in the basket')
 })
 

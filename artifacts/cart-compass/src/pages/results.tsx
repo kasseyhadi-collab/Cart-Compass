@@ -7,6 +7,12 @@ import { Card } from "@/components/ui/card";
 import { Trophy, ChevronLeft, Store, Tag, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+function formatUnitPrice(unitPrice: number | null | undefined, baseUnit: string | null | undefined): string | null {
+  if (unitPrice == null || baseUnit == null || baseUnit === "") return null;
+  const fmt = unitPrice >= 1 ? unitPrice.toFixed(2) : unitPrice >= 0.1 ? unitPrice.toFixed(3) : unitPrice.toFixed(4);
+  return `$${fmt}/${baseUnit}`;
+}
+
 function formatLastUpdated(iso: string | null | undefined): string | null {
   if (!iso) return null;
   const date = new Date(iso);
@@ -143,6 +149,81 @@ export default function ResultsPage() {
                     <span className="font-bold text-green-600">-${itemSave.savings.toFixed(2)}</span>
                   </div>
                 ))}
+            </div>
+          </>
+        )}
+
+        {/* Per-item price breakdown */}
+        {result.itemBreakdown && result.itemBreakdown.length > 0 && (
+          <>
+            <h3 className="text-lg font-bold text-foreground mb-4">Price Breakdown</h3>
+            <div className="flex flex-col gap-3 mb-8">
+              {result.itemBreakdown.map((item) => {
+                const winnerStorePrice = item.storePrices.find(
+                  (sp) => sp.storeId === result.winnerId
+                );
+                const sortedStorePrices = [...item.storePrices].sort(
+                  (a, b) => a.price - b.price
+                );
+                return (
+                  <div key={item.productId} className="bg-card border border-border rounded-2xl p-4 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="font-semibold text-foreground text-sm leading-tight pr-2">
+                        {item.productName}
+                      </span>
+                      {item.quantity > 1 && (
+                        <span className="text-xs text-muted-foreground bg-accent rounded-full px-2 py-0.5 flex-shrink-0">
+                          ×{item.quantity}
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {sortedStorePrices.map((sp) => {
+                        const unitPriceLabel = formatUnitPrice(sp.unitPrice, sp.baseUnit);
+                        const isCheaper = sp.storeId === result.winnerId;
+                        return (
+                          <div
+                            key={sp.storeId}
+                            className={cn(
+                              "rounded-xl p-3",
+                              isCheaper ? "bg-primary/5 border border-primary/20" : "bg-accent/50"
+                            )}
+                          >
+                            <p className={cn(
+                              "text-xs font-semibold mb-1",
+                              isCheaper ? "text-primary" : "text-muted-foreground"
+                            )}>
+                              {sp.storeName}
+                              {isCheaper && <span className="ml-1">✓</span>}
+                            </p>
+                            <p className="font-bold text-foreground text-base">
+                              ${sp.price.toFixed(2)}
+                            </p>
+                            {unitPriceLabel && (
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {unitPriceLabel}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {winnerStorePrice && (() => {
+                      const otherPrice = item.storePrices.find(
+                        (sp) => sp.storeId !== result.winnerId
+                      );
+                      if (!otherPrice) return null;
+                      const saving = Math.round((otherPrice.price - winnerStorePrice.price) * item.quantity * 100) / 100;
+                      if (saving <= 0) return null;
+                      return (
+                        <p className="text-xs text-green-600 font-semibold mt-2 text-right">
+                          Save ${saving.toFixed(2)}{item.quantity > 1 ? ` (${item.quantity}×)` : ""}
+                        </p>
+                      );
+                    })()}
+                  </div>
+                );
+              })}
             </div>
           </>
         )}

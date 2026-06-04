@@ -232,6 +232,8 @@ components:
           type: ["string", "null"]
         unitType:
           type: ["string", "null"]
+        baseUnit:
+          type: ["string", "null"]
 
     Category:
       type: object
@@ -304,6 +306,36 @@ components:
         savings:
           type: number
 
+    ItemStorePrice:
+      type: object
+      required: [storeId, storeName, price]
+      properties:
+        storeId:
+          type: integer
+        storeName:
+          type: string
+        price:
+          type: number
+        unitPrice:
+          type: ["number", "null"]
+        baseUnit:
+          type: ["string", "null"]
+
+    ItemBreakdown:
+      type: object
+      required: [productId, productName, quantity, storePrices]
+      properties:
+        productId:
+          type: integer
+        productName:
+          type: string
+        quantity:
+          type: integer
+        storePrices:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItemStorePrice"
+
     ComparisonResult:
       type: object
       required: [storeTotals, winnerId, winnerName, winnerTotal, savings, itemSavings]
@@ -324,6 +356,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ItemSaving"
+        itemBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItemBreakdown"
         pricesLastUpdated:
           type: ["string", "null"]
           description: ISO timestamp of the most recently updated price in the basket

@@ -16,4 +16,6 @@ export interface Product {
   packageSize?: string | null;
   /** @nullable */
   unitType?: string | null;
+  /** @nullable */
+  baseUnit?: string | null;
 }

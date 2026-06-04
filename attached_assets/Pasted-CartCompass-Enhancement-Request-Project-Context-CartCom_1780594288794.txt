@@ -1,0 +1,99 @@
+CartCompass Enhancement Request
+
+Project Context:
+CartCompass is a live grocery comparison app built with React, TypeScript, Express, PostgreSQL, Drizzle ORM, TanStack Query, and Tailwind.
+
+Goal:
+Display unit pricing on the Results page using the existing unit_price data already stored in the database.
+
+Current State:
+- prices.unit_price already exists in the database
+- unit_price is populated during XLSX imports
+- comparison calculations already work
+- Results page currently shows:
+  - Winner store
+  - Total basket savings
+  - Per-item price breakdown
+  - Last updated timestamp
+- Unit prices are NOT currently displayed
+
+Task:
+
+1. Trace the existing comparison flow:
+   POST /api/compare
+   compare.ts
+   Results page
+
+2. Determine whether unit_price is already being returned by the compare endpoint.
+
+3. If unit_price is not included in the compare API response:
+   - Extend the response type
+   - Include Walmart and Fry's unit_price values for every product in the basket
+   - Update OpenAPI spec
+   - Regenerate API client and Zod schemas if required
+
+4. Update the Results page UI.
+
+For each product comparison row, display:
+
+Product Name
+
+Walmart:
+$X.XX
+Unit Price: $0.0XXX per [base_unit]
+
+Fry's:
+$X.XX
+Unit Price: $0.0XXX per [base_unit]
+
+Savings:
+$X.XX
+
+Examples:
+
+Turkey Breast
+Walmart: $9.94
+Unit Price: $9.94/lb
+
+Fry's: $7.49
+Unit Price: $7.49/lb
+
+Savings: $2.45
+
+or
+
+Pepsi 12 Pack
+Walmart: $8.99
+Unit Price: $0.062/oz
+
+Fry's: $10.49
+Unit Price: $0.073/oz
+
+Savings: $1.50
+
+5. UI Requirements:
+- Keep current layout intact
+- Add unit pricing as secondary muted text beneath shelf price
+- Use existing Tailwind styling patterns
+- Hide unit price if:
+  - unit_price is null
+  - base_unit is null
+- No breaking changes to existing functionality
+
+6. Validation:
+- TypeScript build passes
+- No lint errors
+- Existing basket comparison still works
+- Results page displays unit prices whenever available
+
+7. Deliverables:
+- List all files changed
+- Explain API changes (if any)
+- Explain database changes (if any)
+- Confirm whether unit prices were already available or required backend work
+- Provide a short summary of the completed implementation
+
+Important:
+Do NOT redesign the Results page.
+Do NOT add new features.
+Only surface the existing unit_price capability that already exists in the backend and database.

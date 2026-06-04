@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { Layout } from "@/components/layout";
-import { useListProducts, useListCategories } from "@workspace/api-client-react";
+import { useListProducts, useListCategories, getListProductsQueryKey } from "@workspace/api-client-react";
 import { useBasket } from "@/lib/basket-context";
 import { Search, Plus, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -27,7 +27,7 @@ export default function ProductsPage() {
     return params;
   }, [search, selectedCategory]);
 
-  const { data: products, isLoading } = useListProducts(queryParams, { query: { enabled: true } });
+  const { data: products, isLoading } = useListProducts(queryParams, { query: { queryKey: getListProductsQueryKey(queryParams), enabled: true } });
 
   return (
     <Layout>

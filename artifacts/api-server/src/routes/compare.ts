@@ -86,6 +86,29 @@ router.post("/compare", async (req, res): Promise<void> => {
     })
     .filter(Boolean) as { productId: number; productName: string; savings: number }[];
 
+  // Per-item breakdown with per-store prices and unit prices
+  const itemBreakdown = items.map((item) => {
+    const product = productMap.get(item.productId);
+    const storePrices = stores.map((store) => {
+      const p = prices.find(
+        (pr) => pr.productId === item.productId && pr.storeId === store.id
+      );
+      return {
+        storeId: store.id,
+        storeName: store.name,
+        price: p ? Number(p.price) : 0,
+        unitPrice: p?.unitPrice != null ? Number(p.unitPrice) : null,
+        baseUnit: product?.baseUnit ?? null,
+      };
+    });
+    return {
+      productId: item.productId,
+      productName: product?.name ?? String(item.productId),
+      quantity: item.quantity,
+      storePrices,
+    };
+  });
+
   // Find the most recent price update across all basket items
   const pricesLastUpdated =
     prices
@@ -102,6 +125,7 @@ router.post("/compare", async (req, res): Promise<void> => {
       winnerTotal: winner.total,
       savings,
       itemSavings,
+      itemBreakdown,
       pricesLastUpdated,
     })
   );

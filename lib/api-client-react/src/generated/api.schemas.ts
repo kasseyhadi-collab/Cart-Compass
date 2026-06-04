@@ -38,6 +38,8 @@ export interface Product {
   packageSize?: string | null;
   /** @nullable */
   unitType?: string | null;
+  /** @nullable */
+  baseUnit?: string | null;
 }
 
 export interface Category {
@@ -80,6 +82,23 @@ export interface ItemSaving {
   savings: number;
 }
 
+export interface ItemStorePrice {
+  storeId: number;
+  storeName: string;
+  price: number;
+  /** @nullable */
+  unitPrice?: number | null;
+  /** @nullable */
+  baseUnit?: string | null;
+}
+
+export interface ItemBreakdown {
+  productId: number;
+  productName: string;
+  quantity: number;
+  storePrices: ItemStorePrice[];
+}
+
 export interface ComparisonResult {
   storeTotals: StoreTotal[];
   winnerId: number;
@@ -87,6 +106,7 @@ export interface ComparisonResult {
   winnerTotal: number;
   savings: number;
   itemSavings: ItemSaving[];
+  itemBreakdown?: ItemBreakdown[];
   /**
      * ISO timestamp of the most recently updated price in the basket
      * @nullable

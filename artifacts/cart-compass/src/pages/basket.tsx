@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { Layout } from "@/components/layout";
 import { useBasket } from "@/lib/basket-context";
-import { useListProducts, useCompareBasket } from "@workspace/api-client-react";
+import { useListProducts, useCompareBasket, getListProductsQueryKey } from "@workspace/api-client-react";
 import { Minus, Plus, Trash2, ShoppingBasket, ArrowRight, Loader2, PackageSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation, Link } from "wouter";
@@ -12,7 +12,7 @@ export default function BasketPage() {
 
   const { data: allProducts, isLoading: isLoadingProducts } = useListProducts(
     undefined,
-    { query: { enabled: items.length > 0 } }
+    { query: { queryKey: getListProductsQueryKey(), enabled: items.length > 0 } }
   );
 
   const compareMutation = useCompareBasket();

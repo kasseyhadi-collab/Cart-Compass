@@ -5,6 +5,7 @@
  * CartCompass API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ItemBreakdown } from './itemBreakdown';
 import type { ItemSaving } from './itemSaving';
 import type { StoreTotal } from './storeTotal';
 
@@ -15,6 +16,7 @@ export interface ComparisonResult {
   winnerTotal: number;
   savings: number;
   itemSavings: ItemSaving[];
+  itemBreakdown?: ItemBreakdown[];
   /**
      * ISO timestamp of the most recently updated price in the basket
      * @nullable
