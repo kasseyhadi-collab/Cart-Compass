@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import multer from "multer";
 import * as XLSX from "xlsx";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db, productsTable, storesTable, pricesTable } from "@workspace/db";
 import { ImportSpreadsheetResponse } from "@workspace/api-zod";
 
@@ -11,11 +11,105 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 type SheetResult = { inserted: number; updated: number; skipped: number };
 type ImportError = { sheet: string; row: number; message: string };
 
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
 function getSheet(workbook: XLSX.WorkBook, name: string) {
   const sheet = workbook.Sheets[name];
   if (!sheet) return null;
   return XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null });
 }
+
+function sendWorkbook(
+  res: Parameters<typeof router.get>[1] extends (req: unknown, res: infer R) => unknown ? R : never,
+  wb: XLSX.WorkBook,
+  filename: string
+) {
+  const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+  (res as any)
+    .set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    .set("Content-Disposition", `attachment; filename="${filename}"`)
+    .send(buf);
+}
+
+function makeSheet(headers: string[], rows: Record<string, unknown>[] = []): XLSX.WorkSheet {
+  const data = [headers, ...rows.map((r) => headers.map((h) => r[h] ?? ""))];
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  // Column widths — roughly match header length
+  ws["!cols"] = headers.map((h) => ({ wch: Math.max(h.length + 4, 14) }));
+  // Bold header row style hint (supported by some readers)
+  ws["!rows"] = [{ hpt: 18 }];
+  return ws;
+}
+
+// ─── Template download ───────────────────────────────────────────────────────
+
+router.get("/admin/template", async (_req, res): Promise<void> => {
+  const wb = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    makeSheet(["ProductID", "ProductName", "Category", "Brand", "PackageSize", "UnitType", "BaseUnit"]),
+    "Products"
+  );
+  XLSX.utils.book_append_sheet(
+    wb,
+    makeSheet(["StoreID", "StoreName"]),
+    "Stores"
+  );
+  XLSX.utils.book_append_sheet(
+    wb,
+    makeSheet(["ProductID", "StoreID", "Price", "UnitPrice", "LastUpdated"]),
+    "Prices"
+  );
+
+  sendWorkbook(res as any, wb, "CartCompass_Template.xlsx");
+});
+
+// ─── Export current data ─────────────────────────────────────────────────────
+
+router.get("/admin/export", async (_req, res): Promise<void> => {
+  const [products, stores, prices] = await Promise.all([
+    db.select().from(productsTable).orderBy(productsTable.id),
+    db.select().from(storesTable).orderBy(storesTable.id),
+    db.select().from(pricesTable).orderBy(pricesTable.productId, pricesTable.storeId),
+  ]);
+
+  const wb = XLSX.utils.book_new();
+
+  // Products sheet
+  const productHeaders = ["ProductID", "ProductName", "Category", "Brand", "PackageSize", "UnitType", "BaseUnit"];
+  const productRows = products.map((p) => ({
+    ProductID: p.id,
+    ProductName: p.name,
+    Category: p.category,
+    Brand: p.brand ?? "",
+    PackageSize: p.packageSize ?? "",
+    UnitType: p.unitType ?? "",
+    BaseUnit: p.baseUnit ?? "",
+  }));
+  XLSX.utils.book_append_sheet(wb, makeSheet(productHeaders, productRows), "Products");
+
+  // Stores sheet
+  const storeHeaders = ["StoreID", "StoreName"];
+  const storeRows = stores.map((s) => ({ StoreID: s.id, StoreName: s.name }));
+  XLSX.utils.book_append_sheet(wb, makeSheet(storeHeaders, storeRows), "Stores");
+
+  // Prices sheet
+  const priceHeaders = ["ProductID", "StoreID", "Price", "UnitPrice", "LastUpdated"];
+  const priceRows = prices.map((p) => ({
+    ProductID: p.productId,
+    StoreID: p.storeId,
+    Price: Number(p.price),
+    UnitPrice: p.unitPrice != null ? Number(p.unitPrice) : "",
+    LastUpdated: p.lastUpdated ? p.lastUpdated.toISOString().slice(0, 10) : "",
+  }));
+  XLSX.utils.book_append_sheet(wb, makeSheet(priceHeaders, priceRows), "Prices");
+
+  const today = new Date().toISOString().slice(0, 10);
+  sendWorkbook(res as any, wb, `CartCompass_Export_${today}.xlsx`);
+});
+
+// ─── Import ──────────────────────────────────────────────────────────────────
 
 async function importProducts(
   rows: Record<string, unknown>[],
@@ -25,7 +119,7 @@ async function importProducts(
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    const rowNum = i + 2; // 1-indexed + header row
+    const rowNum = i + 2;
 
     const name = row["ProductName"] ?? row["Name"] ?? row["name"];
     const category = row["Category"] ?? row["category"];
@@ -56,7 +150,6 @@ async function importProducts(
       baseUnit: baseUnit ? String(baseUnit).trim() : null,
     };
 
-    // If numeric ProductID provided, upsert by id; otherwise upsert by name
     if (productId && !isNaN(Number(productId))) {
       const existing = await db
         .select({ id: productsTable.id })
@@ -172,7 +265,9 @@ async function importPrices(
 
     const unitPriceRaw = row["UnitPrice"] ?? row["unit_price"] ?? null;
     const unitPrice =
-      unitPriceRaw !== null && !isNaN(Number(unitPriceRaw)) ? String(Number(unitPriceRaw)) : null;
+      unitPriceRaw !== null && unitPriceRaw !== "" && !isNaN(Number(unitPriceRaw))
+        ? String(Number(unitPriceRaw))
+        : null;
 
     const values = {
       productId: Number(productId),
@@ -182,13 +277,11 @@ async function importPrices(
       lastUpdated: new Date(),
     };
 
-    // Check existence with both keys
     const [existingPrice] = await db
       .select()
       .from(pricesTable)
       .where(eq(pricesTable.productId, values.productId));
 
-    // Use a proper upsert (insert or update on conflict)
     await db
       .insert(pricesTable)
       .values(values)
@@ -222,8 +315,7 @@ router.post(
 
     if (
       !req.file.originalname.endsWith(".xlsx") &&
-      req.file.mimetype !==
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      req.file.mimetype !== "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     ) {
       res.status(400).json({ error: "File must be an .xlsx spreadsheet" });
       return;
@@ -243,15 +335,15 @@ router.post(
     const storesRows = getSheet(workbook, "Stores");
     const pricesRows = getSheet(workbook, "Prices");
 
-    const productsResult: SheetResult = productsRows
+    const productsResult = productsRows
       ? await importProducts(productsRows, errors)
       : { inserted: 0, updated: 0, skipped: 0 };
 
-    const storesResult: SheetResult = storesRows
+    const storesResult = storesRows
       ? await importStores(storesRows, errors)
       : { inserted: 0, updated: 0, skipped: 0 };
 
-    const pricesResult: SheetResult = pricesRows
+    const pricesResult = pricesRows
       ? await importPrices(pricesRows, errors)
       : { inserted: 0, updated: 0, skipped: 0 };
 
