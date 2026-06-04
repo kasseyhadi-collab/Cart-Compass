@@ -16,6 +16,8 @@ tags:
     description: Store operations
   - name: compare
     description: Basket comparison operations
+  - name: admin
+    description: Admin operations
 paths:
   /healthz:
     get:
@@ -135,6 +137,22 @@ paths:
         "400":
           description: Invalid basket
 
+  /admin/import:
+    post:
+      operationId: importSpreadsheet
+      tags: [admin]
+      summary: Import spreadsheet data
+      description: Upload an XLSX file with Products, Stores, and Prices sheets to bulk-import catalog data
+      responses:
+        "200":
+          description: Import result summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResult"
+        "400":
+          description: Invalid file or format
+
   /prices:
     get:
       operationId: listPrices
@@ -153,6 +171,43 @@ paths:
 
 components:
   schemas:
+    ImportSheetResult:
+      type: object
+      required: [inserted, updated, skipped]
+      properties:
+        inserted:
+          type: integer
+        updated:
+          type: integer
+        skipped:
+          type: integer
+
+    ImportError:
+      type: object
+      required: [sheet, row, message]
+      properties:
+        sheet:
+          type: string
+        row:
+          type: integer
+        message:
+          type: string
+
+    ImportResult:
+      type: object
+      required: [products, stores, prices, errors]
+      properties:
+        products:
+          $ref: "#/components/schemas/ImportSheetResult"
+        stores:
+          $ref: "#/components/schemas/ImportSheetResult"
+        prices:
+          $ref: "#/components/schemas/ImportSheetResult"
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportError"
+
     HealthStatus:
       type: object
       properties:

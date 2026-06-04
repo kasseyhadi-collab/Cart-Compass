@@ -105,6 +105,34 @@ export const CompareBasketResponse = zod.object({
 
 
 /**
+ * Upload an XLSX file with Products, Stores, and Prices sheets to bulk-import catalog data
+ * @summary Import spreadsheet data
+ */
+export const ImportSpreadsheetResponse = zod.object({
+  "products": zod.object({
+  "inserted": zod.number(),
+  "updated": zod.number(),
+  "skipped": zod.number()
+}),
+  "stores": zod.object({
+  "inserted": zod.number(),
+  "updated": zod.number(),
+  "skipped": zod.number()
+}),
+  "prices": zod.object({
+  "inserted": zod.number(),
+  "updated": zod.number(),
+  "skipped": zod.number()
+}),
+  "errors": zod.array(zod.object({
+  "sheet": zod.string(),
+  "row": zod.number(),
+  "message": zod.string()
+}))
+})
+
+
+/**
  * Returns all product prices across all stores
  * @summary List all prices
  */

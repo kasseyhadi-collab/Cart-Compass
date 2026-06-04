@@ -24,6 +24,7 @@ import type {
   Category,
   ComparisonResult,
   HealthStatus,
+  ImportResult,
   ListProductsParams,
   Price,
   Product,
@@ -508,6 +509,77 @@ export const useCompareBasket = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getCompareBasketMutationOptions(options));
+    }
+
+export const getImportSpreadsheetUrl = () => {
+
+
+
+
+  return `/api/admin/import`
+}
+
+/**
+ * Upload an XLSX file with Products, Stores, and Prices sheets to bulk-import catalog data
+ * @summary Import spreadsheet data
+ */
+export const importSpreadsheet = async ( options?: RequestInit): Promise<ImportResult> => {
+
+  return customFetch<ImportResult>(getImportSpreadsheetUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getImportSpreadsheetMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importSpreadsheet>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importSpreadsheet>>, TError,void, TContext> => {
+
+const mutationKey = ['importSpreadsheet'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importSpreadsheet>>, void> = () => {
+
+
+          return  importSpreadsheet(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportSpreadsheetMutationResult = NonNullable<Awaited<ReturnType<typeof importSpreadsheet>>>
+
+    export type ImportSpreadsheetMutationError = ErrorType<void>
+
+    /**
+ * @summary Import spreadsheet data
+ */
+export const useImportSpreadsheet = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importSpreadsheet>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof importSpreadsheet>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getImportSpreadsheetMutationOptions(options));
     }
 
 export const getListPricesUrl = () => {

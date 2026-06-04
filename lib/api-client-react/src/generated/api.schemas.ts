@@ -5,6 +5,25 @@
  * CartCompass API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface ImportSheetResult {
+  inserted: number;
+  updated: number;
+  skipped: number;
+}
+
+export interface ImportError {
+  sheet: string;
+  row: number;
+  message: string;
+}
+
+export interface ImportResult {
+  products: ImportSheetResult;
+  stores: ImportSheetResult;
+  prices: ImportSheetResult;
+  errors: ImportError[];
+}
+
 export interface HealthStatus {
   status: string;
 }
