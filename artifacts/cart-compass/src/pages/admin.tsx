@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListProductsQueryKey, getListCategoriesQueryKey, getListStoresQueryKey } from "@workspace/api-client-react";
 import { Link } from "wouter";
@@ -15,6 +15,15 @@ type ImportResult = {
 };
 type UploadState = "idle" | "uploading" | "success" | "error";
 type DownloadState = "idle" | "loading" | "error";
+
+type StatsData = {
+  products: number;
+  stores: number;
+  priceRecords: number;
+  productsMissingPrices: number;
+  productsMissingBaseUnit: number;
+  lastImport: string | null;
+};
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -34,6 +43,12 @@ async function triggerDownload(url: string, filename: string): Promise<void> {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(objectUrl);
+}
+
+function formatDate(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -76,6 +91,93 @@ function SheetSummary({ label, result }: { label: string; result: SheetResult })
         <span className="text-sm font-bold text-[#1E293B]">{total}</span>
         <p className="text-xs text-gray-400">rows</p>
       </div>
+    </div>
+  );
+}
+
+// ─── Stat item ────────────────────────────────────────────────────────────────
+
+function StatItem({
+  label,
+  value,
+  warn,
+  isDate,
+}: {
+  label: string;
+  value: number | string | null;
+  warn?: boolean;
+  isDate?: boolean;
+}) {
+  const displayValue = isDate
+    ? formatDate(value as string | null)
+    : value ?? "—";
+
+  return (
+    <div className={`rounded-xl p-3 flex flex-col gap-0.5 ${warn ? "bg-amber-50 border border-amber-100" : "bg-gray-50"}`}>
+      <span className={`text-xs font-medium leading-tight ${warn ? "text-amber-600" : "text-gray-500"}`}>
+        {label}
+      </span>
+      <span className={`text-xl font-bold leading-tight ${warn ? "text-amber-700" : "text-[#1E293B]"}`}>
+        {displayValue}
+      </span>
+    </div>
+  );
+}
+
+// ─── Data quality card ────────────────────────────────────────────────────────
+
+function DataQualityCard() {
+  const [stats, setStats] = useState<StatsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetch(`${getBase()}/api/admin/stats`)
+      .then((r) => {
+        if (!r.ok) throw new Error("stats failed");
+        return r.json() as Promise<StatsData>;
+      })
+      .then((data) => { if (!cancelled) { setStats(data); setLoading(false); } })
+      .catch(() => { if (!cancelled) { setError(true); setLoading(false); } });
+    return () => { cancelled = true; };
+  }, []);
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-semibold text-[#1E293B] text-sm">Data Quality</h2>
+        {loading && (
+          <div className="w-4 h-4 rounded-full border-2 border-gray-200 border-t-[#1F7A4C] animate-spin" />
+        )}
+        {error && (
+          <span className="text-xs text-red-500">Could not load</span>
+        )}
+      </div>
+
+      {stats && (
+        <div className="grid grid-cols-2 gap-2">
+          <StatItem label="Products" value={stats.products} />
+          <StatItem label="Stores" value={stats.stores} />
+          <StatItem label="Price Records" value={stats.priceRecords} />
+          <StatItem
+            label="Missing Prices"
+            value={stats.productsMissingPrices}
+            warn={stats.productsMissingPrices > 0}
+          />
+          <StatItem
+            label="Missing BaseUnit"
+            value={stats.productsMissingBaseUnit}
+            warn={stats.productsMissingBaseUnit > 0}
+          />
+          <StatItem label="Last Import" value={stats.lastImport} isDate />
+        </div>
+      )}
+
+      {!stats && !loading && !error && (
+        <p className="text-xs text-gray-400 text-center py-4">No data yet</p>
+      )}
     </div>
   );
 }
@@ -273,6 +375,10 @@ export default function AdminPage() {
       </div>
 
       <div className="max-w-[430px] mx-auto px-4 py-6 space-y-5">
+
+        {/* ── Data Quality Dashboard ── */}
+        <SectionDivider label="Data Quality" />
+        <DataQualityCard />
 
         {/* ── Workflow hint ── */}
         <div className="bg-[#1E293B] rounded-2xl px-4 py-3.5 flex items-start gap-3">

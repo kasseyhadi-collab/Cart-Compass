@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import multer from "multer";
 import * as XLSX from "xlsx";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { db, productsTable, storesTable, pricesTable } from "@workspace/db";
 import { ImportSpreadsheetResponse } from "@workspace/api-zod";
 
@@ -107,6 +107,33 @@ router.get("/admin/export", async (_req, res): Promise<void> => {
 
   const today = new Date().toISOString().slice(0, 10);
   sendWorkbook(res as any, wb, `CartCompass_Export_${today}.xlsx`);
+});
+
+// ─── Stats ───────────────────────────────────────────────────────────────────
+
+router.get("/admin/stats", async (_req, res): Promise<void> => {
+  const [productCount, storeCount, priceCount, missingPrices, missingBaseUnit, lastImport] =
+    await Promise.all([
+      db.execute(sql`SELECT COUNT(*)::int AS count FROM products`),
+      db.execute(sql`SELECT COUNT(*)::int AS count FROM stores`),
+      db.execute(sql`SELECT COUNT(*)::int AS count FROM prices`),
+      db.execute(
+        sql`SELECT COUNT(*)::int AS count FROM products WHERE id NOT IN (SELECT DISTINCT product_id FROM prices)`
+      ),
+      db.execute(
+        sql`SELECT COUNT(*)::int AS count FROM products WHERE base_unit IS NULL OR base_unit = ''`
+      ),
+      db.execute(sql`SELECT MAX(last_updated) AS last_updated FROM prices`),
+    ]);
+
+  res.json({
+    products: productCount.rows[0]?.count ?? 0,
+    stores: storeCount.rows[0]?.count ?? 0,
+    priceRecords: priceCount.rows[0]?.count ?? 0,
+    productsMissingPrices: missingPrices.rows[0]?.count ?? 0,
+    productsMissingBaseUnit: missingBaseUnit.rows[0]?.count ?? 0,
+    lastImport: (lastImport.rows[0]?.last_updated as string) ?? null,
+  });
 });
 
 // ─── Import ──────────────────────────────────────────────────────────────────
