@@ -100,7 +100,8 @@ export const CompareBasketResponse = zod.object({
   "productId": zod.number(),
   "productName": zod.string(),
   "savings": zod.number()
-}))
+})),
+  "pricesLastUpdated": zod.string().nullish().describe('ISO timestamp of the most recently updated price in the basket')
 })
 
 

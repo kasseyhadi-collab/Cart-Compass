@@ -15,4 +15,9 @@ export interface ComparisonResult {
   winnerTotal: number;
   savings: number;
   itemSavings: ItemSaving[];
+  /**
+     * ISO timestamp of the most recently updated price in the basket
+     * @nullable
+     */
+  pricesLastUpdated?: string | null;
 }

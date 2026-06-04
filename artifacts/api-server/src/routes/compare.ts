@@ -86,6 +86,14 @@ router.post("/compare", async (req, res): Promise<void> => {
     })
     .filter(Boolean) as { productId: number; productName: string; savings: number }[];
 
+  // Find the most recent price update across all basket items
+  const pricesLastUpdated =
+    prices
+      .map((p) => p.lastUpdated)
+      .filter(Boolean)
+      .sort((a, b) => (b! > a! ? 1 : -1))[0]
+      ?.toISOString() ?? null;
+
   res.json(
     CompareBasketResponse.parse({
       storeTotals,
@@ -94,6 +102,7 @@ router.post("/compare", async (req, res): Promise<void> => {
       winnerTotal: winner.total,
       savings,
       itemSavings,
+      pricesLastUpdated,
     })
   );
 });

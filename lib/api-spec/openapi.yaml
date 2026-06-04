@@ -324,3 +324,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ItemSaving"
+        pricesLastUpdated:
+          type: ["string", "null"]
+          description: ISO timestamp of the most recently updated price in the basket
