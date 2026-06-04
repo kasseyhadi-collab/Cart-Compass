@@ -59,7 +59,7 @@ export default function BasketPage() {
             <div className="text-center">
               <p className="font-bold text-foreground text-base">Comparing stores…</p>
               <p className="text-muted-foreground text-sm mt-1">
-                Checking prices at Walmart and Fry's
+                Checking prices across Phoenix stores
               </p>
             </div>
           </div>
@@ -77,7 +77,7 @@ export default function BasketPage() {
             </div>
             <h2 className="text-xl font-bold text-foreground mb-2">Your basket is empty</h2>
             <p className="text-muted-foreground text-sm mb-1 leading-relaxed">
-              Add items from your weekly grocery list and we'll calculate your total at Walmart and Fry's — so you shop at the cheaper store.
+              Add items from your weekly grocery list and we'll calculate your total at each store — so you always shop at the cheapest one.
             </p>
             <p className="text-xs text-muted-foreground/70 mb-7">
               No account needed. Prices are updated regularly for Phoenix, AZ stores.

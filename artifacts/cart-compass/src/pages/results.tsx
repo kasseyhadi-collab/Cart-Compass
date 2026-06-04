@@ -123,9 +123,13 @@ export default function ResultsPage() {
               </div>
               <div className="text-right">
                 <span className="font-bold text-lg block">${store.total.toFixed(2)}</span>
-                {store.storeId !== result.winnerId && (
-                  <span className="text-xs text-muted-foreground">+${result.savings.toFixed(2)} more</span>
-                )}
+                {store.storeId !== result.winnerId && (() => {
+                  const winnerTotal = result.storeTotals.find(s => s.storeId === result.winnerId)?.total ?? 0;
+                  const delta = Math.round((store.total - winnerTotal) * 100) / 100;
+                  return delta > 0 ? (
+                    <span className="text-xs text-muted-foreground">+${delta.toFixed(2)} more</span>
+                  ) : null;
+                })()}
               </div>
             </div>
           ))}
@@ -177,7 +181,7 @@ export default function ResultsPage() {
                         </span>
                       )}
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className={cn("grid gap-2", sortedStorePrices.length >= 3 ? "grid-cols-3" : "grid-cols-2")}>
                       {sortedStorePrices.map((sp) => {
                         const unitPriceLabel = formatUnitPrice(sp.unitPrice, sp.baseUnit);
                         const isCheaper = sp.storeId === result.winnerId;
@@ -209,9 +213,9 @@ export default function ResultsPage() {
                       })}
                     </div>
                     {winnerStorePrice && (() => {
-                      const otherPrice = item.storePrices.find(
-                        (sp) => sp.storeId !== result.winnerId
-                      );
+                      const otherPrice = item.storePrices
+                        .filter((sp) => sp.storeId !== result.winnerId)
+                        .sort((a, b) => b.price - a.price)[0];
                       if (!otherPrice) return null;
                       const saving = Math.round((otherPrice.price - winnerStorePrice.price) * item.quantity * 100) / 100;
                       if (saving <= 0) return null;
